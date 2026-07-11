@@ -1,7 +1,7 @@
 {
 	"id": "pg",
 	"name": "Postgres DB",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "1.7.2",
 	"description": "Lets you use Postgresql database and manage queries.",
 	"author": "Arghyahub",
