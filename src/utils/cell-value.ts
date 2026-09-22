@@ -1,5 +1,3 @@
-export const MAX_CELL_DISPLAY_LENGTH = 120;
-
 export function formatCellValue(value: unknown): string {
 	if (value === null || value === undefined) {
 		return '';
@@ -15,13 +13,6 @@ export function formatCellValue(value: unknown): string {
 		return String(value);
 	}
 	return JSON.stringify(value);
-}
-
-export function truncateCellDisplay(text: string): string {
-	if (text.length <= MAX_CELL_DISPLAY_LENGTH) {
-		return text;
-	}
-	return `${text.slice(0, MAX_CELL_DISPLAY_LENGTH)}...`;
 }
 
 export function isJsonLikeValue(value: unknown): boolean {
