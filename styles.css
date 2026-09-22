@@ -595,7 +595,16 @@
 	white-space: nowrap;
 	word-break: keep-all;
 	overflow-wrap: normal;
-	max-width: 30ch;
+}
+
+.pg-query-plan {
+	margin: 0;
+	padding: var(--size-2-2) var(--size-2-3);
+	font-family: var(--font-monospace);
+	font-size: var(--font-smaller);
+	white-space: pre;
+	overflow-x: auto;
+	line-height: var(--line-height-tight);
 }
 
 .pg-query-cell-expandable {

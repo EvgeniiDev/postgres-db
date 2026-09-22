@@ -2,10 +2,7 @@ import { ItemView, Notice, WorkspaceLeaf, setIcon } from 'obsidian';
 import { MAX_CONNECT_ATTEMPTS, VIEW_TYPE_QUERY_RESULT } from '../constants';
 import type PgPlugin from '../main';
 import { closeCellValuePopup, openCellValuePopup } from '../ui/cell-value-popup';
-import {
-	formatCellValue,
-	truncateCellDisplay,
-} from '../utils/cell-value';
+import { formatCellValue } from '../utils/cell-value';
 import { QueryResult } from '../utils/query';
 import { saveQueryResultCsv } from '../utils/save-query-result';
 
@@ -156,7 +153,32 @@ export class QueryResultView extends ItemView {
 			return;
 		}
 
+		if (this.isTextResult(result)) {
+			this.renderTextResult(result);
+			return;
+		}
+
 		this.renderTable(result);
+	}
+
+	private isTextResult(result: QueryResult): boolean {
+		// EXPLAIN returns a single "QUERY PLAN" text column — a table with
+		// truncated cells is unreadable for it, render as plain text.
+		return (
+			result.columns.length === 1 &&
+			result.columns[0]?.trim().toLowerCase() === 'query plan'
+		);
+	}
+
+	private renderTextResult(result: QueryResult): void {
+		const column = result.columns[0] as string;
+		const text = result.rows
+			.map((row) => formatCellValue(row[column]))
+			.join('\n');
+		this.bodyEl.createEl('pre', {
+			cls: 'pg-query-plan',
+			text,
+		});
 	}
 
 	private updateSaveButton(enabled: boolean): void {
@@ -230,8 +252,7 @@ export class QueryResultView extends ItemView {
 					cell.createSpan({ cls: 'pg-query-null', text: 'NULL' });
 				} else {
 					const fullText = formatCellValue(value);
-					const displayText = truncateCellDisplay(fullText);
-					cell.setText(displayText);
+					cell.setText(fullText);
 					cell.addClass('pg-query-cell-expandable');
 					cell.setAttr('title', 'Click to view full value');
 					cell.addEventListener('click', (event) => {

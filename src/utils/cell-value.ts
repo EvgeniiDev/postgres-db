@@ -1,4 +1,4 @@
-export const MAX_CELL_DISPLAY_LENGTH = 30;
+export const MAX_CELL_DISPLAY_LENGTH = 120;
 
 export function formatCellValue(value: unknown): string {
 	if (value === null || value === undefined) {
