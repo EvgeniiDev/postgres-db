@@ -128,8 +128,42 @@ export async function executeQuery(
 
 		try {
 			await client.connect();
-			const result = await client.query(trimmed);
+			const raw = (await client.query(trimmed)) as unknown;
 			const durationMs = Date.now() - start;
+
+			// Multi-statement input: node-pg returns an array of Result.
+			type PgResult = {
+				rows?: Record<string, unknown>[];
+				rowCount?: number | null;
+				command?: string;
+				fields?: Array<{ name: string }>;
+			};
+			const results = (Array.isArray(raw) ? raw : [raw]) as PgResult[];
+			const rowResults = results.filter(
+				(r) => Array.isArray(r.rows) && r.rows.length > 0,
+			);
+			const isPlanResult = (r: PgResult): boolean =>
+				r.fields?.length === 1 &&
+				r.fields[0]?.name.trim().toLowerCase() === 'query plan';
+
+			let result: PgResult = results[results.length - 1] ?? { rows: [] };
+			if (rowResults.length > 0 && rowResults.every(isPlanResult)) {
+				const mergedRows: Record<string, unknown>[] = [];
+				rowResults.forEach((r, i) => {
+					if (i > 0) {
+						mergedRows.push({
+							'QUERY PLAN': `────── plan ${i + 1} ──────`,
+						});
+					}
+					mergedRows.push(...(r.rows as Record<string, unknown>[]));
+				});
+				result = {
+					fields: rowResults[0]?.fields,
+					rows: mergedRows,
+					rowCount: mergedRows.length,
+					command: rowResults[0]?.command,
+				};
+			}
 
 			if (!Array.isArray(result.rows)) {
 				return {
