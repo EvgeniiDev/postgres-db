@@ -163,6 +163,36 @@ export async function executeQuery(
 					rowCount: mergedRows.length,
 					command: rowResults[0]?.command,
 				};
+			} else if (rowResults.length > 1) {
+				// Several result sets with identical columns → one table,
+				// tagged by statement number.
+				const keyOf = (r: PgResult): string =>
+					JSON.stringify((r.fields ?? []).map((f) => f.name));
+				const key0 = keyOf(rowResults[0] as PgResult);
+				if (rowResults.every((r) => keyOf(r) === key0)) {
+					const mergedRows: Record<string, unknown>[] = [];
+					results.forEach((r, i) => {
+						if (
+							!Array.isArray(r.rows) ||
+							r.rows.length === 0 ||
+							keyOf(r) !== key0
+						) {
+							return;
+						}
+						for (const row of r.rows) {
+							mergedRows.push({ stmt: i + 1, ...row });
+						}
+					});
+					result = {
+						fields: [
+							{ name: 'stmt' },
+							...(rowResults[0]?.fields ?? []),
+						],
+						rows: mergedRows,
+						rowCount: mergedRows.length,
+						command: rowResults[0]?.command,
+					};
+				}
 			}
 
 			if (!Array.isArray(result.rows)) {
