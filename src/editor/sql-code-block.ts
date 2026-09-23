@@ -1,4 +1,5 @@
-import { Notice, setIcon } from 'obsidian';
+import { MarkdownView, Notice, setIcon } from 'obsidian';
+import type { MarkdownPostProcessorContext } from 'obsidian';
 import type PgPlugin from '../main';
 import {
 	closeConnectionDropdown,
@@ -20,8 +21,8 @@ import { updateDbButton } from './sql-block-labels';
 export function registerSqlCodeBlock(plugin: PgPlugin): void {
 	plugin.registerMarkdownCodeBlockProcessor(
 		'sql',
-		(source, el) => {
-			renderSqlCodeBlock(plugin, source, el);
+		(source, el, ctx) => {
+			renderSqlCodeBlock(plugin, source, el, ctx);
 		},
 		-10,
 	);
@@ -35,6 +36,7 @@ function renderSqlCodeBlock(
 	plugin: PgPlugin,
 	source: string,
 	el: HTMLElement,
+	ctx: MarkdownPostProcessorContext,
 ): void {
 	el.empty();
 	el.addClass('pg-sql-block');
@@ -105,6 +107,37 @@ function renderSqlCodeBlock(
 	const codeEl = el.createEl('pre', { cls: 'pg-sql-code language-sql' });
 	const codeInner = codeEl.createEl('code', { cls: 'language-sql' });
 	applySqlSyntaxHighlighting(codeInner, source);
+
+	codeEl.setAttribute('title', 'Double-click to edit');
+	codeEl.addEventListener('dblclick', (event) => {
+		event.preventDefault();
+		event.stopPropagation();
+		jumpToSource(plugin, el, ctx);
+	});
+}
+
+function jumpToSource(
+	plugin: PgPlugin,
+	el: HTMLElement,
+	ctx: MarkdownPostProcessorContext,
+): void {
+	const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
+	if (!view) {
+		return;
+	}
+	const info = ctx.getSectionInfo(el);
+	void view.leaf
+		.setViewState({
+			type: 'markdown',
+			state: { file: ctx.sourcePath, mode: 'source' },
+		})
+		.then(() => {
+			if (!info) {
+				return;
+			}
+			view.editor.setCursor({ line: info.lineStart + 1, ch: 0 });
+			view.editor.focus();
+		});
 }
 
 async function handleSchemaRefresh(plugin: PgPlugin): Promise<void> {
