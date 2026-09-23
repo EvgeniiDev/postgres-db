@@ -89,6 +89,21 @@ function renderSqlCodeBlock(
 		void copySql(source);
 	});
 
+	const explainBtn = actions.createEl('button', {
+		cls: 'pg-sql-explain-btn clickable-icon',
+		attr: {
+			type: 'button',
+			'aria-label': 'Explain (analyze, buffers)',
+			title: 'Explain (analyze, buffers)',
+		},
+	});
+	setIcon(explainBtn, 'gauge');
+	explainBtn.addEventListener('click', (event) => {
+		event.preventDefault();
+		event.stopPropagation();
+		void runExplainQuery(plugin, source, explainBtn);
+	});
+
 	const runBtn = actions.createEl('button', {
 		cls: 'pg-sql-run-btn clickable-icon',
 		attr: {
@@ -167,6 +182,38 @@ async function copySql(source: string): Promise<void> {
 	} catch {
 		new Notice('Could not copy SQL to clipboard.');
 	}
+}
+
+function buildExplainSql(source: string): string | null {
+	const sql = source.trim();
+	if (!sql) {
+		return null;
+	}
+	if (/^explain\b/i.test(sql)) {
+		return sql;
+	}
+	const codeOnly = sql
+		.split('\n')
+		.filter((line) => !line.trim().startsWith('--'))
+		.join('\n')
+		.replace(/;\s*$/, '');
+	if (codeOnly.includes(';')) {
+		return null;
+	}
+	return `explain (analyze, buffers) ${sql}`;
+}
+
+async function runExplainQuery(
+	plugin: PgPlugin,
+	source: string,
+	explainBtn: HTMLButtonElement,
+): Promise<void> {
+	const explainSql = buildExplainSql(source);
+	if (!explainSql) {
+		new Notice('Explain works on a single statement.');
+		return;
+	}
+	await runSqlQuery(plugin, explainSql, explainBtn);
 }
 
 async function runSqlQuery(
