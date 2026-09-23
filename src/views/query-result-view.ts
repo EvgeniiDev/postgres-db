@@ -175,10 +175,14 @@ export class QueryResultView extends ItemView {
 		const text = result.rows
 			.map((row) => formatCellValue(row[column]))
 			.join('\n');
-		this.bodyEl.createEl('pre', {
+		const planEl = this.bodyEl.createEl('pre', {
 			cls: 'pg-query-plan',
 			text,
 		});
+		const planFontSize = this.plugin.settings.planFontSize;
+		if (planFontSize > 0) {
+			planEl.style.fontSize = `${planFontSize}px`;
+		}
 	}
 
 	private updateSaveButton(enabled: boolean): void {

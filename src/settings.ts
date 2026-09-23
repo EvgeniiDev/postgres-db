@@ -6,11 +6,13 @@ import { migrateLegacyConnection } from './utils/connection';
 export interface PgPluginSettings {
 	connections: PostgresConnection[];
 	defaultConnectionId: string | null;
+	planFontSize: number;
 }
 
 export const DEFAULT_SETTINGS: PgPluginSettings = {
 	connections: [],
 	defaultConnectionId: null,
+	planFontSize: 0,
 };
 
 export function normalizeSettings(raw: unknown): PgPluginSettings {
@@ -37,9 +39,18 @@ export function normalizeSettings(raw: unknown): PgPluginSettings {
 			? data.defaultConnectionId
 			: (connections[0]?.id ?? null);
 
+	const planFontSize =
+		typeof data.planFontSize === 'number' &&
+		Number.isFinite(data.planFontSize) &&
+		data.planFontSize >= 0 &&
+		data.planFontSize <= 18
+			? data.planFontSize
+			: 0;
+
 	return {
 		connections,
 		defaultConnectionId,
+		planFontSize,
 	};
 }
 
@@ -63,6 +74,22 @@ export class PgSettingTab extends PluginSettingTab {
 			.setName('Saved connections')
 			.setDesc(
 				`${this.plugin.settings.connections.length} connection(s) saved`,
+			);
+
+		new Setting(containerEl)
+			.setName('EXPLAIN plan font size')
+			.setDesc(
+				'Font size in px for EXPLAIN output in the results panel. 0 = theme default. Applies to new results.',
+			)
+			.addSlider((slider) =>
+				slider
+					.setLimits(0, 18, 1)
+					.setValue(this.plugin.settings.planFontSize)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.planFontSize = value;
+						await this.plugin.saveSettings();
+					}),
 			);
 	}
 }
